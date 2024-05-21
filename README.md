@@ -1,48 +1,50 @@
-# pggb_starship_pipeline
+# PGGB_starship_pipeline
 
 This pipeline uses currently public and currently in-house assemblies of principally Penicillium and Aspergillus species groups to generate genome graphs  <br />
-These genome graphs are then used to extract regions not present in at least 1 genome and extracts these Regions of Interest (ROIs) with a minimum size (currently 30kb)  <br />
-The regions are then annotated  <br />
-Following this a set of annotated features found in Starship specific genes are searched for within the proteins in order to extract ROIs with Starship-related genes (SRGs)  <br />
+These genome graphs are then used to extract regions not present in at least 1 other genome <br />
+The candidate Regions of Interest (ROIs) are then merged (several steps) and the remaining regions are filtered for a minimum size of 30kb  <br />
+All the remaining regions are then annotated  <br />
+Following this a set of annotated features found in Starship specific genes are searched for within the proteins in order to extract ROIs with Starship-related genes (SRGs), called here Starship-related regions (SRRs) <br />
 
 The Species groups were selected based on available long-read genomes, genetic distances and interest in relation to domestication (or as a control in the apparent absence of domestication) <br />
-Below is an example using a subset of the Fasciculata group in the Penicillium genus containing the species: solitum/crustosum, fuscoglaucum, biforme, caseifulvum and camemberti <br />
-This containined a total of 8 genomes (4 for solitum/crustosum and 1 for each other species) <br />
+Below is an example using a subset of the Fasciculata group in the Penicillium genus containing the species: solitum, crustosum, fuscoglaucum, biforme, caseifulvum and camemberti <br />
+This containined a total of 7 genomes (2 for solitum and 1 for each other species) <br />
 
-As input the genomes were named in the following format 'species.strain_genome.fa'. For example 'Psolitum.strain12_ASM1313803v1.fa' or 'Pcaseifulvum.ESE00019.fa' (in the absence of a current public genome identifier) <br />
-More importantly, as this information is used downstream, the contig names were also modified in a similar format, 'species.strain_contig'. For example '>Psolitum.strain12_JAASRZ010000050' (using the public genome contig/scaffold label) or '>Pcaseifulvum.ESE00019_contig1'  <br />
+IMPORTANT <br />
+As input the genomes were named in the following format 'species.strain_genomeaccession.fa'. For example 'Psolitum.strain12_ASM1313803v1.fa' or 'Pcaseifulvum.ESE00019.fa' (in the absence of a current public genome accession) <br />
+More importantly, as this information is used downstream, the contig names were also modified in a similar format, 'species.strain_contig'. For example '>Psolitum.strain12_JAASRZ010000050' (using the public genome contig/scaffold label) or '>Pcaseifulvum.ESE00019_contig1' <br />
 
 
 # generate the genome graph and extract the ROIs
 ```
-##to generate the pggb environment I simply ran:
+##to generate the conda/mamba PGGB environment you can run:
 #mamba create -n pggb -c bioconda -c conda-forge pggb
 ##now everything is run in the pggb conda env
 conda activate pggb
 
-##First step essentially is to run pggb to generate the graph plus some stats etc
+##First step essentially is to run pggb to generate the graph plus some stats
 ##here we use a few modifable parameters (some are necessary to modify)
-## -n is essentially the number of genomes 
-## -s is the minimum alignment size so we select something over the generic Ty size of 6-7kb
+## -n is essentially the number of genomes (will limit the number of paths through a single node to this number therefore attempting to get one path per genome)
+## -s is the minimum alignment size so ideally select something over the generic TE sizes, for this example it is ~6-7kb
 ## -p is the minimum identity...this one is hard to define due to the large distance between genomes...for this analysis is appears safe to go wide of your estimation to be safe
 ## -m asks for multiqc plots
 ## -S asks for some wfmash (the aligner) stats
-## -t is the number of threads during parellelised processes
-## -Y is a seperator to generate a sample name per path and this will then be used to avoid self-mappings; so in this case it will be the 'species.strain' name before the underscore '_' and therefore no within strain mapping (so we will use the underscore as the seperator)
+## -t is the number of threads to use during parellelised processes
+## -Y is a seperator to generate a sample name per path and this will then be used to avoid self-mappings; so in this case it will be the 'species.strain' name before the underscore '_' that will be given to all contigs from that strain and therefore no within strain mapping will be performed (so we will use the underscore as the seperator)
 
 ##just some variables for naming the output files etc
 combinedgenome="fasciculata_reduced_less.LR_combined.fa"
 combinedgenome2=$( echo $combinedgenome | awk -F ".fa" '{print $1}'  )
 ##set the number of genomes
-genomecount="8"
-##set a max divergence beyond was is neccessary
+genomecount="7"
+##set a max divergence beyond what is neccessary
 maxdist="75"
 threads="30"
 soption="30000"
 ##using default for the kmer size (tried increasing this to 29 as used in yeast examples but for more genome graphs with more diverged species this hindered alignment)
 k="19"
 ##manually selecting and combining the genomes here from a folder called genomes/fasciculata
-zcat genomes/fasciculata/Pcaseifulvum.ESE00019.final.renamed.fa.gz genomes/fasciculata/Pfuscoglaucum.ESE00090.final.renamed.fa.gz genomes/fasciculata/Pcamemberti.LCP06093.final.renamed.fa.gz genomes/fasciculata/Pbiforme.LCP05531.final.renamed.fa.gz genomes/fasciculata/Psolitum.LCP06249.final.renamed.fa.gz genomes/fasciculata/Psolitum.strain12_ASM1313803v1.renamed.fa.gz genomes/fasciculata/Psolitum.IBT25940_ASM2882975v1.renamed.fa.gz genomes/fasciculata/Pcrustosum.IBT35664_ASM2882740v1.renamed.fa.gz > ${combinedgenome}
+zcat genomes/fasciculata/Pcaseifulvum.ESE00019.final.renamed.fa.gz genomes/fasciculata/Pfuscoglaucum.ESE00090.final.renamed.fa.gz genomes/fasciculata/Pcamemberti.LCP06093.final.renamed.fa.gz genomes/fasciculata/Pbiforme.LCP05531.final.renamed.fa.gz genomes/fasciculata/Psolitum.strain12_ASM1313803v1.renamed.fa.gz genomes/fasciculata/Psolitum.IBT25940_ASM2882975v1.renamed.fa.gz genomes/fasciculata/Pcrustosum.IBT35664_ASM2882740v1.renamed.fa.gz > ${combinedgenome}
 ##index the combined genome file
 samtools faidx ${combinedgenome}
 ##nnow build the genome graph
@@ -70,10 +72,10 @@ rm temp*
 ##then can extract the regions, as done with coverage as well, where we can use the absence of any region in any strain (as this is an all-v-all comp)
 ##so it melts the matrix
 ##then WITHIN A STRAIN it combines all 1bp overlapping regions with less than 50% covered, then removes all regions smaller than 10kb (trying to eliminate transposon impact)
-##afterwards it does a second merge with 20kb gaps allowed (STILL WITHIN STRAIN); this distance was based on the distribution of the nearest neighbour for regions which indentified a peak around 20kb so is targetting gaps appear more frequent thatn what we should expect
-##these gaps that are merged represent transposon impacted regions that break up previously continuous regions
+##afterwards it does a second merge with 20kb gaps allowed (STILL WITHIN STRAIN); this distance was based on the distribution of the nearest neighbour for regions which indentified a peak around 20kb so is targetting gaps appear more frequent that what we should expect
+##these gaps that are merged generally represent transposon impacted regions that break up previously continuous regions
 ##removing the 10kb regions first though removes the chances of many little fragmnets being joint over large distances during the second merging
-##distribution looked at using thie : cat ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.tsv | awk '{print $1"\t"$2"\t"$3"\t"$5"\tESE00019\n"$1"\t"$2"\t"$3"\t"$6"\tESE00090\n"$1"\t"$2"\t"$3"\t"$7"\tLCP05531\n"$1"\t"$2"\t"$3"\t"$8"\tLCP06093"}' | awk '{if($4 < 0.5) print}' | bedtools merge -d 1 -c 5 -o distinct -delim ";" | awk '{if($3-$2 > 10000) print}' | awk '{if($1==contig){print $2-pos; pos=$3}else {contig=$1; pos=$3}  }' > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.dist_neighbour2.txt
+##distribution looked at using this : cat ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.tsv | awk '{print $1"\t"$2"\t"$3"\t"$5"\tESE00019\n"$1"\t"$2"\t"$3"\t"$6"\tESE00090\n"$1"\t"$2"\t"$3"\t"$7"\tLCP05531\n"$1"\t"$2"\t"$3"\t"$8"\tLCP06093"}' | awk '{if($4 < 0.5) print}' | bedtools merge -d 1 -c 5 -o distinct -delim ";" | awk '{if($3-$2 > 10000) print}' | awk '{if($1==contig){print $2-pos; pos=$3}else {contig=$1; pos=$3}  }' > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.dist_neighbour2.txt
 ##actually perform the extraction and merging to get the Regions Of Interest (ROIs)
 for i in $( seq 1 1 ${genomecount} )
 do
@@ -88,7 +90,7 @@ done > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.
 ##set the minimum ROI size variable
 minsizeinsertion="30000"
 minsizeinsertion2=$( echo $minsizeinsertion | awk '{print $1/1000}' )
-##filter the ROI file
+##filter the ROI file and merge accross genomes
 cat ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.tsv | awk -v minsize="$minsizeinsertion" '{if($3-$2 > minsize) print}' | sort -k1,1 -k2,2n | bedtools merge -d 1 -c 4 -o distinct -delim ";"  > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.${minsizeinsertion2}kb_min.tsv
 ##extract the genome regions from these ROIs
 cat ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.${minsizeinsertion2}kb_min.tsv | awk '{print $1":"$2"-"$3}' | while read region
@@ -97,7 +99,7 @@ samtools faidx ../${combinedgenome} "${region}"
 done > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.${minsizeinsertion2}kb_min.fa
 
 ##in these cases we can certainly be looking at deletions
-##however large deletions are rather rare
+##however large deletions are rather rare, particularly in coding rich regions
 ##filtering for some features without knowing the phylogenetic realtionship of the strains could remove important regions. Considering in each graph the phylogenetic relationship was changing, these potential deletions are left in and we can continue to analyse in the absence of potentially biasing the results
 
 ##how about some stats about these ROIs, per strain
@@ -112,11 +114,11 @@ grep ^$strain ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matr
 done >> ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.${minsizeinsertion2}kb_min.stats.tsv
 
 ```
- # Annotate the ROIs with braker and funannotate
+ # Annotate the ROIs with braker2 and funannotate
 ```
 
 ##so now we have our regions of interest across the many strains
-##because we do not have annotations for all genomes (depending if public etc) or not uniformly performed annotations at the least; we can now just take our regions of interest and run some annotations on them directly in order to have uniform predictions on all regions
+##because we do not have annotations for all genomes (depending if public etc) or not uniformly performed annotations at the least; we can now just take our regions of interest and run some annotations on them directly in order to have uniform predictions on all regions (this also saves on annotating entire genomes for each assembly)
 ##first we need to predict genes
 ##to do this I used braker installed in a conda env
 #mamba create -n braker -c bioconda braker
@@ -135,7 +137,7 @@ conda activate braker
 #cp gmes_linux_64_4/gm_key /home/USER/.gm_key
 
 ###we also need some ortholog datasets to feed into braker for training
-###this one is the least specific and takes all protein databases for fungi and concatenates them into a large dataset
+###this one is the least specific and takes all protein databases for fungi and concatenates them into a large dataset (AFTER SOME BENCHMARKING DONE LATER, FOR THIS DATA, THE EUROTIALES BUSCO DB WOULD PROBABLY HAVE BEEN BETTER, so I recomment doing that instead)
 #wget https://v100.orthodb.org/download/odb10_fungi_fasta.tar.gz
 #tar -zxf odb10_fungi_fasta.tar.gz
 #mv fungi fungi_odb10
@@ -163,17 +165,17 @@ fastafile=$(  echo $input | sed "s/.fa/.UPPERCASE_RENAMED.fa/g" )
 
 awk 'BEGIN{FS=" "}{if(!/>/){print toupper($0)}else{print $1}}'  ../${input}  | awk -F "." '{if($1 ~ ">") {print ">"$2} else {print}}' | awk -F "_" '{if($1 ~ ">") {print $1}else {print}}' | awk '{if(NR == 1) {strain=$1 ; count=1; print $1":HTR"count} else if($1 ~ ">" && strain==$1){count++ ; print $1":HTR"count} else if($1 ~ ">" && strain!=$1) {$1 ~ ">" && strain=$1 ; count=1; print $1":HTR"count} else {print}}' > ${fastafile}
 ##annotate with braker first to find genes
-##need to modify the prot_seq path to the protein database downloaded earier
+##need to modify the prot_seq path to the protein database downloaded earlier
 ##need to modify the AUGUSTUS_CONFIG_PATH and the AUGUSTUS_SCRIPTS_PATH paths to the conda env set up for braker (I was using miniconda3)
 ##need to modify the GENEMARK_PATH and the PROTHINT_PATH paths to the genemark folder downloaded earlier
 ##then run
 braker.pl --fungus --gff3 --genome=${fastafile} --prot_seq=/PATH/fungi_odb10/refseq_db.fa --epmode --workingdir=braker_output.${strain}.fungi_odb10 --AUGUSTUS_CONFIG_PATH=/PATH/miniconda3/envs/braker/config/ --AUGUSTUS_SCRIPTS_PATH=/PATH/miniconda3/envs/braker/bin/ --GENEMARK_PATH=/PATH/gmes_linux_64_4/ --PROTHINT_PATH=/PATH/gmes_linux_64_4/ProtHint/bin/ --cores=${threads}
 
-
+##Now we should have predicted genes from braker
 ##first need to slightly modify the braker output to remove stars placed at the end of the predicted proteins in order to be used by interproscan inside funannotate below
 cat braker_output.${strain}.fungi_odb10/augustus.hints.aa | sed 's/\*//g' > braker_output.${strain}.fungi_odb10/augustus.hints.star_mod.aa
 
-##we can actually fully annotate the genes with protein domains and eggnog annotations using funannotate
+##we can actually fully and functionally annotate the genes with protein domains and eggnog annotations using funannotate
 ##to install funannotate, I did the following
 ##for this an environement with funannotate was created
 #mamba create -n funannotate -c bioconda -c conda-forge funannotate eggnog-mapper
@@ -194,7 +196,7 @@ cat braker_output.${strain}.fungi_odb10/augustus.hints.aa | sed 's/\*//g' > brak
 
 ##activate the env
 conda activate funannotate
-##set another variable for the threads as the count is set differently in funannotate (it is divisible by eight)
+##set another variable for the threads as the count is set differently in funannotate (it is divisible by eight essentially)
 threads3=$( echo $threads | awk '{print $0/8}' | awk -F "." '{print $1}' )
 ##export the path to the funannotate database as set up before (just using a path to a stored version)
 export FUNANNOTATE_DB=/PATH/funannotate_db
@@ -211,10 +213,10 @@ funannotate iprscan -i braker_output.${strain}.fungi_odb10/augustus.hints.star_m
 emapper.py -i braker_output.${strain}.fungi_odb10/augustus.hints.star_mod.aa -o ${strain}.eggnog --data_dir /PATH/eggnog_db --cpu $threads
 
 ##now we actually annotate the genes
-##so other than using the basic script, we also feed in the interproscan and eggnog results run previously
+##so other than using the basic funannotate 'annotate' script, we also feed in the interproscan and eggnog results run previously
 funannotate annotate --gff braker_output.${strain}.fungi_odb10/augustus.hints.gff3 --fasta ${fastafile} --species "Penicillium" -o ${strain}.funannotate --strain ${strain} --busco_db fungi --cpus $threads3 --iprscan ${strain}.iprscan --eggnog ${strain}.eggnog.emapper.annotations
 
-##can remove the funannotate and eggnog db as they are large
+##can remove the funannotate and eggnog db as they are large (at the end of everything)
 #rm -r funannotate_db
 conda deactivate
 conda deactivate
@@ -222,14 +224,14 @@ conda deactivate
 ```
 # Identify the Starship-related genes and extract the ROIs that contain at least one
 ```
-##now identifying the starship related genes (SRGs)
+##now identifying the SRGs and their corresponding SRRs
 
 ##only take the first transcript annotated
 ##for this IPR combinations are important and therefore we should looks at combos instead
 
 ##a combination of only "IPR009057" && "IPR001005"  or just "IPR001005" and nothing else = the MYB/SANT TF
-##previously added the combination of "IPR009057" && "IPR001005" && "IPR017930" (MYB domain) for the MYB/SANT ID but it is too common in other regions of the genome
-##a combination of "IPR013087" (Zinc-finger) && "IPR021842" (DUF3435) or "IPR011010" ("DNA breaking-rejoining enzyme") && "IPR021842" (plus combinations with IPR013762 which is an intergrase-like catalytic domain)  and nothing else or "IPR021842" along = the DUF3435
+##previously added the combination of "IPR009057" && "IPR001005" && "IPR017930" (MYB domain) for the MYB/SANT ID but it is too common in other regions of some genomes
+##a combination of "IPR013087" (Zinc-finger) && "IPR021842" (DUF3435) or "IPR011010" ("DNA breaking-rejoining enzyme") && "IPR021842" (plus combinations with IPR013762 which is an intergrase-like catalytic domain) and nothing else or "IPR021842" alone = the DUF3435
 ##any genes with "IPR022198" = the DUF3723
 ##an interesting case (more common in seems in aspergillus strains) is a combination of the MYB and the IPR013087 (commonly associated with the IPR021842 DUF3435 domain) protein domains = a MYB/SANT-ZnF combo
 
@@ -239,7 +241,7 @@ conda deactivate
 ## genes containing "ENOG503P5Q6" = conidiophore development related genes (CRGs)
 ## and genes containing "PF20255" = DUF6066 (another DUF with unknown function)
 
-##extract the positions of those genes identified to be SRGs
+##extract the positions of those genes identified to be SRGs using awk to screen for all the accepted annotations
 echo "contig;start;end;gene;Identifying_annotation;SRG_type" | sed 's/;/\t/g' > ${strain}.SRGs_positions.tsv
 cat ${strain}.funannotate/annotate_results/Penicillium_${strain}.gff3 | awk -F "\t" '{if($0 ~ "IPR001005" || $0 ~ "IPR021842" || $0 ~ "IPR022198" ) print}' | grep ".t1;" | cut -f9 | awk -F ";" '{print $1}' | sed 's/ID=//g' | sort -u | while read gene
 do
@@ -260,7 +262,7 @@ echo "contig;start;end" | sed 's/;/\t/g' > ${strain}.SRGs_positions.contigs_size
 awk '{print $1"\t1\t"$2}' ${fastafile}.fai >> ${strain}.SRGs_positions.contigs_size.tsv
 
 cd ../
-##now we can use the annotation to get a better look at the SRG-ROIs
+##now we can use the annotation to get a better look at the SRRs
 ##First we can look at gene density as I already observed that fusco regions have very low gene density
 echo "assembly;ROI;ROI_gffname;gene_count;size;genes_per_10kb" | tr ';' '\t' > ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI.${minsizeinsertion2}kb_min.gene_density.tsv
 cat ROI_annotation_${minsizeinsertion2}kb_min/name_mod_association.tsv | while read regions
