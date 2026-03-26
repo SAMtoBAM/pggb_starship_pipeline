@@ -16,7 +16,7 @@ More importantly, as this information is used downstream, the contig names were 
 
 
 # generate the genome graph and extract the ROIs
-```
+```bash
 ##to generate the conda/mamba PGGB environment you can run:
 #mamba create -n pggb -c bioconda -c conda-forge pggb
 ##now everything is run in the pggb conda env
@@ -115,7 +115,7 @@ done >> ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI
 
 ```
  # Annotate the ROIs with braker2 and funannotate
-```
+```bash
 
 ##so now we have our regions of interest across the many strains
 ##because we do not have annotations for all genomes (depending if public etc) or not uniformly performed annotations at the least; we can now just take our regions of interest and run some annotations on them directly in order to have uniform predictions on all regions (this also saves on annotating entire genomes for each assembly)
@@ -223,7 +223,7 @@ conda deactivate
 
 ```
 # Identify the Starship-related genes and extract the ROIs that contain at least one
-```
+```bash
 ##now identifying the SRGs and their corresponding SRRs
 
 ##only take the first transcript annotated
@@ -303,7 +303,7 @@ done >> ${combinedgenome2}.smooth.final.w1kb.multiple_references.pavs.matrix.ROI
 # Combining the results of multiple genome graphs to generalise the impact of domestication
 
 
-```
+```bash
 
 
 ```
@@ -322,7 +322,7 @@ In this can we are trying to define not only other captain-like genes, but also 
 
 First we can evaluate candiates by evaluating all protein domain containing gene in the PAVs <br/>
 here there is the assumption that at least one genome in the genome graphs has been fully annotated (XXXXX) in order to evaluate specificity of the domain to the PAV vs the whole genome
-```
+```bash
 
 ###a more un-biased means of evalutating the likelihood of certain domains being involved in a HGT like system is to survey all domains
 ##we can evaluate the domains based on a few stats
@@ -357,7 +357,7 @@ done >> HTR.protein_domains.stats.tsv
 
 Now evaluate these domain containing PAV regions manually using alingments etc with a selected domain (YYYYYY)
 
-```
+```bash
 
 cd ${dataset}.pggb_s${soption}_p${maxdist}_k${k}_G7919_G8069_Y 
 
@@ -517,7 +517,7 @@ done
 
 # Now use R to plot these data
 
-```{r setup, include=FALSE}
+```R
 library(ggExtra)
 library(ggpubr)
 library(gggenomes)
@@ -525,7 +525,7 @@ library(gggenomes)
 
 ## first getting the candiate protein domain
 
-```{r}
+```R
 
 ##trying to define whether a gene is specific to a HTR region is difficult by eye
 ##can look at all domains and whether they have features indicative of being at a starship edge and being specific to HTR regions
@@ -563,7 +563,7 @@ ggMarginal(plot1, type = "histogram", bins = 100, fill = "steelblue")
 
 Now plot PAVs containing candidate domains using gggenomes
 
-```{r, out.width='100%'}
+```R
 domain="YYYYYY"
 
 ##read in bed file of HTRs
@@ -618,7 +618,7 @@ we can then plost this instead
 
 ##example with HTR:ZZ
 
-```{r, out.width='100%'}
+```R
 
 ###a better way is using the regions to redo the alignment in order to be more accurate with these local regions (can be less stringent than in the genome graph due to the amount of similarity of disparate regions)
 ##below is an example for HTR:ZZ 
